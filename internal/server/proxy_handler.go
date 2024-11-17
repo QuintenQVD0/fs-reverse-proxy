@@ -5,30 +5,25 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"strings"
 	"time"
 )
 
 func NewProxy(target *url.URL) *httputil.ReverseProxy {
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	return proxy
+	return httputil.NewSingleHostReverseProxy(target)
 }
 
-func ProxyRequestHandler(proxy *httputil.ReverseProxy, url *url.URL, endpoint string) func(http.ResponseWriter, *http.Request) {
+func ProxyRequestHandler(proxy *httputil.ReverseProxy, target *url.URL) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("[ PROXY SERVER ] Request received at %s at %s\n", r.URL, time.Now().UTC())
-		// Update the headers to allow for SSL redirection
-		r.URL.Host = url.Host
-		r.URL.Scheme = url.Scheme
-		r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
-		r.Host = url.Host
 
-		// trim reverseProxyRouterPrefix
-		path := r.URL.Path
-		r.URL.Path = strings.TrimLeft(path, endpoint)
+		// Update the request to forward it to the target server
+		r.URL.Host = target.Host
+		r.URL.Scheme = target.Scheme
+		r.Header.Set("X-Forwarded-Host", r.Host)
+		r.Host = target.Host
 
-		// Note that ServeHttp is non blocking and uses a go routine under the hood
-		fmt.Printf("[ PROXY SERVER ]Proxying request to %s at %s\n", r.URL, time.Now().UTC())
+		// Proxy the request
+		fmt.Printf("[ PROXY SERVER ] Proxying request to %s at %s\n", r.URL, time.Now().UTC())
 		proxy.ServeHTTP(w, r)
 	}
 }

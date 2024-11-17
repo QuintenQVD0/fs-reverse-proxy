@@ -1,0 +1,73 @@
+name: Go Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  create:
+    tags:
+      - '*'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    strategy:
+      matrix:
+        go-version: ['1.22.3']
+        platform: [amd64]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Install dependencies
+      run: go mod tidy
+
+    - name: Build
+      run: GOARCH=${{ matrix.platform }} go build -v -o build/reverse_proxy_linux_x64 cmd/main.go
+
+    - uses: actions/upload-artifact@v4
+      if: matrix.platform == 'amd64'
+      with:
+        name: reverse_proxy_linux_x64
+        path: build/reverse_proxy_linux_x64
+
+
+  release:
+    runs-on: ubuntu-20.04
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.3'
+
+    - name: Install dependencies
+      run: go mod tidy
+
+    - name: Build for amd64
+      run: GOARCH=amd64 go build -v -o build/reverse_proxy_linux_x64 cmd/main.go
+
+
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        generate_release_notes: true
+        files: |
+          build/reverse_proxy_linux_x64

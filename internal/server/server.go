@@ -4,33 +4,38 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"reverse-proxy-learn/internal/configs"
 )
 
-// Run start the server on defined port
-func Run() error {
-	// load configurations from config file
-	config, err := configs.NewConfiguration()
+func Run(host, port, endpoint, destination string) error {
+	// Parse the destination URL
+	targetURL, err := url.Parse(destination)
 	if err != nil {
-		return fmt.Errorf("could not load configuration: %v", err)
+		return fmt.Errorf("invalid destination URL: %v", err)
 	}
 
-	// Creates a new router
+	// Create a new router
 	mux := http.NewServeMux()
 
-	// register health check endpoint
+	// Register health check endpoint
 	mux.HandleFunc("/ping", ping)
 
-	// Iterating through the configuration resource and registering them
-	// into the router.
-	for _, resource := range config.Resources {
-		url, _ := url.Parse(resource.Destination_URL)
-		proxy := NewProxy(url)
-		mux.HandleFunc(resource.Endpoint, ProxyRequestHandler(proxy, url, resource.Endpoint))
+	// Handle the root endpoint redirection to index.html
+	if endpoint == "/" {
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/" {
+				http.Redirect(w, r, "/index.html", http.StatusFound)
+				return
+			}
+			ProxyRequestHandler(NewProxy(targetURL), targetURL)(w, r)
+		})
+	} else {
+		mux.HandleFunc(endpoint, ProxyRequestHandler(NewProxy(targetURL), targetURL))
 	}
 
-	// Running proxy server
-	if err := http.ListenAndServe(config.Server.Host+":"+config.Server.Listen_port, mux); err != nil {
+	// Start the server
+	addr := fmt.Sprintf("%s:%s", host, port)
+	fmt.Printf("Starting server at %s\n", addr)
+	if err := http.ListenAndServe(addr, mux); err != nil {
 		return fmt.Errorf("could not start the server: %v", err)
 	}
 
