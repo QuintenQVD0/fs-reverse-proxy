@@ -50,7 +50,22 @@ func RunHTTPS(host, port, endpoint, destination, certFile, keyFile string) error
 
 	// Create a new HTTP handler
 	mux := http.NewServeMux()
-	mux.HandleFunc(endpoint, ProxyRequestHandler(NewProxy(targetURL), targetURL))
+
+	// Register health check endpoint
+	mux.HandleFunc("/ping", ping)
+
+	// Handle the root endpoint redirection to index.html
+	if endpoint == "/" {
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/" {
+				http.Redirect(w, r, "/index.html", http.StatusFound)
+				return
+			}
+			ProxyRequestHandler(NewProxy(targetURL), targetURL)(w, r)
+		})
+	} else {
+		mux.HandleFunc(endpoint, ProxyRequestHandler(NewProxy(targetURL), targetURL))
+	}
 
 	// Start HTTPS server
 	addr := fmt.Sprintf("%s:%s", host, port)
