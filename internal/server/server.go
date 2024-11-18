@@ -2,11 +2,12 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 )
 
-func Run(host, port, endpoint, destination string) error {
+func RunHTTP(host, port, endpoint, destination string) error {
 	// Parse the destination URL
 	targetURL, err := url.Parse(destination)
 	if err != nil {
@@ -34,7 +35,7 @@ func Run(host, port, endpoint, destination string) error {
 
 	// Start HTTP server
 	addr := fmt.Sprintf("%s:%s", host, port)
-	fmt.Printf("Starting HTTP server on %s\n", addr)
+	log.Printf("Starting HTTP server on %s\n", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		return fmt.Errorf("could not start HTTP server: %v", err)
 	}
@@ -69,7 +70,7 @@ func RunHTTPS(host, port, endpoint, destination, certFile, keyFile string) error
 
 	// Start HTTPS server
 	addr := fmt.Sprintf("%s:%s", host, port)
-	fmt.Printf("Starting HTTPS server on %s\n", addr)
+	log.Printf("Starting HTTPS server on %s\n", addr)
 	server := &http.Server{
 		Addr:    addr,
 		Handler: mux,

@@ -1,7 +1,7 @@
 package server
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -14,7 +14,7 @@ func NewProxy(target *url.URL) *httputil.ReverseProxy {
 
 func ProxyRequestHandler(proxy *httputil.ReverseProxy, target *url.URL) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("[ PROXY SERVER ] Request received at %s at %s\n", r.URL, time.Now().UTC())
+		log.Printf("[ PROXY SERVER ] Request received at %s at %s\n", r.URL, time.Now().UTC())
 
 		// Update the request to forward it to the target server
 		r.URL.Host = target.Host
@@ -23,7 +23,7 @@ func ProxyRequestHandler(proxy *httputil.ReverseProxy, target *url.URL) func(htt
 		r.Host = target.Host
 
 		// Proxy the request
-		fmt.Printf("[ PROXY SERVER ] Proxying request to %s at %s\n", r.URL, time.Now().UTC())
+		log.Printf("[ PROXY SERVER ] Proxying request to %s at %s\n", r.URL, time.Now().UTC())
 		proxy.ServeHTTP(w, r)
 	}
 }
