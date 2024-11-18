@@ -42,7 +42,6 @@ func RunHTTP(host, port, endpoint, destination string) error {
 	return nil
 }
 
-// RunHTTPS starts an HTTPS server and handles HTTP-to-HTTPS redirection.
 func RunHTTPS(host, port, endpoint, destination, certFile, keyFile string) error {
 	// Parse the destination URL
 	targetURL, err := url.Parse(destination)
@@ -59,12 +58,6 @@ func RunHTTPS(host, port, endpoint, destination, certFile, keyFile string) error
 	// Handle the root endpoint redirection to index.html
 	if endpoint == "/" {
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			// Redirect to HTTPS if the scheme is HTTP
-			if r.TLS == nil {
-				redirectToHTTPS(w, r)
-				return
-			}
-
 			if r.URL.Path == "/" {
 				http.Redirect(w, r, "/index.html", http.StatusFound)
 				return
@@ -72,14 +65,7 @@ func RunHTTPS(host, port, endpoint, destination, certFile, keyFile string) error
 			ProxyRequestHandler(NewProxy(targetURL), targetURL)(w, r)
 		})
 	} else {
-		mux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
-			// Redirect to HTTPS if the scheme is HTTP
-			if r.TLS == nil {
-				redirectToHTTPS(w, r)
-				return
-			}
-			ProxyRequestHandler(NewProxy(targetURL), targetURL)(w, r)
-		})
+		mux.HandleFunc(endpoint, ProxyRequestHandler(NewProxy(targetURL), targetURL))
 	}
 
 	// Start HTTPS server
@@ -95,10 +81,4 @@ func RunHTTPS(host, port, endpoint, destination, certFile, keyFile string) error
 		return fmt.Errorf("could not start HTTPS server: %v", err)
 	}
 	return nil
-}
-
-// redirectToHTTPS sends a 301 redirect to the HTTPS version of the request.
-func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
-	httpsURL := fmt.Sprintf("https://%s%s", r.Host, r.URL.RequestURI())
-	http.Redirect(w, r, httpsURL, http.StatusMovedPermanently)
 }
