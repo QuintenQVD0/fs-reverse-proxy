@@ -10,7 +10,7 @@ import (
 
 func main() {
 	host := flag.String("host", "0.0.0.0", "Host to bind the server to")
-	port := flag.String("listen-port", "8080", "Port to listen on")
+	port := flag.String("listen-port", "8081", "Port to listen on")
 	endpoint := flag.String("endpoint", "/", "Endpoint to proxy")
 	destination := flag.String("destination-url", "http://localhost:8080", "Destination URL for the proxy")
 	background := flag.Bool("background", false, "Run the server in the background")
